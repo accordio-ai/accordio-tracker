@@ -27,11 +27,13 @@ macOS 12 or later, Apple Silicon and Intel. MIT licensed.
 
 ## Install
 
+<a href="https://accordio.ai/download"><img src=".github/assets/download-mac.png" width="680" alt="Download Accordio tracker for macOS 12+, Apple Silicon and Intel, free"></a>
+
+Direct disk images: [Apple Silicon](https://app.accordio.ai/api/download/mac?arch=arm64) · [Intel](https://app.accordio.ai/api/download/mac?arch=x64). Or with Homebrew:
+
 ```sh
 brew install --cask accordio-ai/tap/accordio
 ```
-
-Or download the disk image directly: [Apple Silicon](https://app.accordio.ai/api/download/mac?arch=arm64) · [Intel](https://app.accordio.ai/api/download/mac?arch=x64).
 
 On first launch macOS asks for Accessibility permission. The tracker needs it to read the frontmost window title, which is the whole mechanism. Deny it and the app runs but records nothing.
 
@@ -120,7 +122,22 @@ Accordio ships a remote MCP connector, so Claude can see the time this app measu
 claude mcp add --transport http accordio https://mcp.accordio.ai/mcp
 ```
 
-The connector reads, logs, and drafts. It never sends, signs, or deletes anything. Setup and the full tool list: [accordio.ai/claude](https://accordio.ai/claude).
+### What Claude can do with it
+
+| Feature | How it works | Why it's useful |
+|---|---|---|
+| Read the day | Totals for today, this week or this month, split billable and non-billable and broken down by project, plus the entries behind them with app name and window title. | "How much did I work today and in what app" is one question, answered from what the tracker measured rather than what you remember. |
+| Sort stray time | Lists entries that landed on no project, then reassigns them in bulk, flips billable, or corrects a description or a day. | The tracker's unassigned bucket empties from chat. Deleting still happens in the app, on purpose. |
+| Run timers | Starts a timer by project name, stops it, or logs work that already happened with a duration you state. | Claude never estimates hours. It records the time you tell it, and nothing else. |
+| Find unbilled hours | Billable time over any date range, totalled by client and project, with money where a project has an hourly rate. | The number an invoice starts from, without opening a spreadsheet. |
+| Draft the invoice | Turns those hours into a draft invoice on your account, with the period and the work in the description. | The draft waits in Accordio for you to review and send. Nothing goes to a client from chat. |
+| Draft proposals and contracts | Takes the brief from the conversation and hands it to Accordio's proposal and contract pipelines. | Signing and sending stay in Accordio. Claude writes the first draft, you keep the decision. |
+| Clients, projects, tasks | Lists and creates all three, and closes tasks. A task that came in from Todoist, Linear or Asana is closed there too. | Tracked hours have somewhere real to land, and the to-do list is reachable from wherever Claude is. |
+| Calendar | Reads every connected Google calendar, finds free windows, blocks focus time or a deadline, and hands out your booking links. | Claude can hold the time before you commit to it, and cannot invite anyone or email anything. |
+| Money in and out | Logs an expense or a payment, totals the period, and lists who owes what and how many days late. | The question "who still owes me" gets an answer with amounts and dates. |
+| The whole picture | One call for hours today, the running timer, unpaid invoices, deadlines, contracts awaiting signature and the week's calendar. | The way a conversation usually opens: what is going on, then something narrower. |
+
+The connector reads, logs, and drafts. It never sends, signs, or deletes anything, and it never logs an hour you did not state. Setup and the full tool list: [accordio.ai/claude](https://accordio.ai/claude).
 
 ## The chat companion
 
