@@ -1,0 +1,7 @@
+# Placeholder for menu bar icons
+# Add the following files:
+# - iconTemplate.png (16x16 pixels)
+# - iconTemplate@2x.png (32x32 pixels)
+# - icon.icns (for macOS app icon)
+#
+# Template icons should be black/transparent for macOS menu bar compatibility

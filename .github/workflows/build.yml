@@ -1,0 +1,125 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # macos-13 was retired by GitHub on 2025-12-08 (per github.blog/changelog/2025-09-19-…).
+    # macos-15 (current macos-latest) is arm64-only — we cross-compile for x64 in a
+    # separate step later if needed. Intel runners now require the paid `-large` tier.
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Python setuptools (needed for node-gyp)
+        # macos-15 ships Python 3.13+ with PEP 668 enforcement — system pip refuses
+        # installs without an explicit override. node-gyp only needs setuptools on
+        # PATH, so a global system install is fine here.
+        run: pip3 install --break-system-packages setuptools
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Import Apple Developer Certificate
+        if: github.event_name != 'pull_request'
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          # Decode certificate
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          security import "$CERTIFICATE_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Add to search list
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+      - name: Build Electron app (arm64 only)
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Override identity: null from package.json when cert is available
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        # --mac --arm64 narrows the package.json target list (which still declares
+        # x64) so we only build the architecture this arm64 runner can cross-compile
+        # natively. x64 will need a separate matrix entry on macos-15-large.
+        run: npm run build && npx electron-builder --mac --arm64
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: accordio-agi-macos
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/latest-mac.yml
+          if-no-files-found: error
+
+      - name: Clean up keychain
+        if: always()
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain-db
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Publish to the PUBLIC releases repo so electron-updater can fetch
+          # assets without an embedded token. Source stays in the private repo.
+          # NOTE: secrets.GH_TOKEN must have contents:write on accordio-agi-release.
+          repository: deduxer-agency/accordio-agi-release
+          # draft:false so the release is visible to electron-updater. A draft
+          # release is invisible to clients and they will not auto-update.
+          draft: false
+          generate_release_notes: true
+          files: |
+            artifacts/**/*.dmg
+            artifacts/**/*.zip
+            artifacts/**/latest-mac.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}

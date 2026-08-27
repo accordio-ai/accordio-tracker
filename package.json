@@ -1,0 +1,155 @@
+{
+  "name": "accordio-agi",
+  "version": "1.6.3",
+  "description": "Accordio AI - your business copilot in the menu bar",
+  "main": "dist/main/index.js",
+  "author": "Accordio",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "clean": "rm -rf dist",
+    "typecheck": "node scripts/check-categories.mjs && tsc --noEmit",
+    "build": "npm run clean && tsc && vite build",
+    "build:electron": "npm run build && electron-builder",
+    "test": "npm run typecheck && npm run test:unit && npm run build",
+    "start": "electron .",
+    "preview": "vite preview",
+    "check:categories": "node scripts/check-categories.mjs",
+    "test:unit": "node scripts/run-tests.mjs"
+  },
+  "comment:dependencies": "Only modules the MAIN process resolves at runtime belong here. electron-builder copies `dependencies` into app.asar verbatim; everything the renderer uses is bundled by Vite into dist/renderer and must stay in devDependencies, or it ships twice (once bundled, once as raw source).",
+  "dependencies": {
+    "@sentry/electron": "^6.11.0",
+    "active-win": "^8.1.0",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.1.7",
+    "file-icon": "^6.0.0",
+    "menubar": "^9.4.0"
+  },
+  "devDependencies": {
+    "@ai-sdk/react": "^3.0.232",
+    "@electron/fuses": "^1.8.0",
+    "@electron/notarize": "^3.1.1",
+    "@number-flow/react": "^0.6.0",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/typography": "^0.5.20",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "@vitejs/plugin-react": "^4.2.1",
+    "ai": "^6.0.230",
+    "autoprefixer": "^10.4.24",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "dotenv": "^17.3.1",
+    "electron": "^40.2.1",
+    "electron-builder": "^24.9.1",
+    "framer-motion": "^12.42.2",
+    "lottie-react": "^2.4.1",
+    "lucide-react": "^0.563.0",
+    "postcss": "^8.5.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.0",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12",
+    "vite-plugin-electron": "^0.28.0",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "zod": "^4.4.3"
+  },
+  "build": {
+    "appId": "com.accordio.agi",
+    "productName": "Accordio AI",
+    "asar": true,
+    "afterPack": "./scripts/afterPack.js",
+    "afterSign": "./scripts/notarize.js",
+    "afterAllArtifactBuild": "./scripts/notarizeDmg.js",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "electronLanguages": [
+        "en"
+      ],
+      "icon": "build/icon.icns",
+      "extendInfo": {
+        "CFBundleIconName": "Accordio Logo",
+        "NSAppleEventsUsageDescription": "Accordio reads window titles and browser tabs to detect which app you're working in and whether you're in a meeting, so your time is tracked accurately."
+      },
+      "extraResources": [
+        {
+          "from": "build/Assets.car",
+          "to": "Assets.car"
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": false,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": "Developer ID Application"
+    },
+    "dmg": {
+      "title": "Accordio AI",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "artifactName": "Accordio-AI-${version}-${arch}.${ext}",
+    "files": [
+      "dist/**/*",
+      "!**/*.map",
+      "!**/node_modules/**/{test,__tests__,tests,powered-test,example,examples,docs,doc,website,.github}",
+      "!**/node_modules/**/*.{md,markdown,flow,ts.map,tsbuildinfo}",
+      "!**/node_modules/.bin",
+      "!**/{.DS_Store,.git,.gitignore,.editorconfig,.eslintrc,.eslintrc.js,.eslintrc.json,.npmignore,.travis.yml,appveyor.yml}"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "deduxer-agency",
+      "repo": "accordio-agi-release"
+    }
+  }
+}

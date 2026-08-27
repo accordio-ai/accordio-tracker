@@ -1,0 +1,47 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.55566,0.81494,0.50391,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "03-sparkle.svg",
+          "name" : "03-sparkle",
+          "position" : {
+            "scale" : 1.55,
+            "translation-in-points" : [
+              63.56149895350825,
+              113.48153801500098
+            ]
+          }
+        },
+        {
+          "image-name" : "02-quill.svg",
+          "name" : "02-quill",
+          "position" : {
+            "scale" : 1.55,
+            "translation-in-points" : [
+              60.43740571314538,
+              107.26856434275123
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
