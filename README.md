@@ -126,16 +126,16 @@ claude mcp add --transport http accordio https://mcp.accordio.ai/mcp
 
 | Feature | How it works | Why it's useful |
 |---|---|---|
-| Read the day | Totals for today, this week or this month, split billable and non-billable and broken down by project, plus the entries behind them with app name and window title. | "How much did I work today and in what app" is one question, answered from what the tracker measured rather than what you remember. |
-| Sort stray time | Lists entries that landed on no project, then reassigns them in bulk, flips billable, or corrects a description or a day. | The tracker's unassigned bucket empties from chat. Deleting still happens in the app, on purpose. |
-| Run timers | Starts a timer by project name, stops it, or logs work that already happened with a duration you state. | Claude never estimates hours. It records the time you tell it, and nothing else. |
-| Find unbilled hours | Billable time over any date range, totalled by client and project, with money where a project has an hourly rate. | The number an invoice starts from, without opening a spreadsheet. |
-| Draft the invoice | Turns those hours into a draft invoice on your account, with the period and the work in the description. | The draft waits in Accordio for you to review and send. Nothing goes to a client from chat. |
-| Draft proposals and contracts | Takes the brief from the conversation and hands it to Accordio's proposal and contract pipelines. | Signing and sending stay in Accordio. Claude writes the first draft, you keep the decision. |
-| Clients, projects, tasks | Lists and creates all three, and closes tasks. A task that came in from Todoist, Linear or Asana is closed there too. | Tracked hours have somewhere real to land, and the to-do list is reachable from wherever Claude is. |
-| Calendar | Reads every connected Google calendar, finds free windows, blocks focus time or a deadline, and hands out your booking links. | Claude can hold the time before you commit to it, and cannot invite anyone or email anything. |
-| Money in and out | Logs an expense or a payment, totals the period, and lists who owes what and how many days late. | The question "who still owes me" gets an answer with amounts and dates. |
-| The whole picture | One call for hours today, the running timer, unpaid invoices, deadlines, contracts awaiting signature and the week's calendar. | The way a conversation usually opens: what is going on, then something narrower. |
+| Read the day | Totals for today, this week or this month, billable and non-billable, by project, and the entries underneath with app name and window title. | "How much did I work today and in what app" is one question. The answer comes from what the tracker recorded, not from memory. |
+| Sort stray time | Lists entries that landed on no project. Reassigns them in bulk, flips billable, corrects a description or moves an entry to another day. | The unassigned bucket empties from chat. Deleting an entry still needs the app. |
+| Run timers | Starts a timer by project name, stops it, or logs work that already happened with a duration you state. | Claude never estimates hours. If you did not say how long something took, it asks. |
+| Find unbilled hours | Billable time over a date range, totalled by client and by project, with money where the project has an hourly rate. | This is the number an invoice starts from. Accordio does not yet mark entries as invoiced, so the range can include hours already billed. The result says so. |
+| Draft the invoice | Turns those hours into a draft invoice on your account, with the period and the work in the description. | The draft waits in Accordio for you to review and send. Nothing reaches a client from chat. |
+| Draft proposals and contracts | Takes the brief from the conversation and hands it to Accordio's proposal and contract pipelines. Takes a minute or two. | You get a first draft to edit. Sending and signing happen in Accordio. |
+| Clients, projects, tasks | Lists and creates all three, and closes tasks. A task that came in from Todoist, Linear or Asana is closed there too. | Tracked hours have a project to land on, and the to-do list is one question away. |
+| Calendar | Reads every connected Google calendar, finds free windows, blocks focus time or a deadline, and gives you your booking links to share. | Claude can hold a slot before you commit to it. It cannot invite anyone or send email. |
+| Money in and out | Logs an expense or a payment, totals the period, and lists who owes what and how many days late. | "Who still owes me" gets amounts and dates. |
+| The whole picture | One call for hours today, the running timer, unpaid invoices, deadlines, contracts awaiting signature and the week's calendar. | Usually the first question. The narrower ones follow. |
 
 The connector reads, logs, and drafts. It never sends, signs, or deletes anything, and it never logs an hour you did not state. Setup and the full tool list: [accordio.ai/claude](https://accordio.ai/claude).
 
