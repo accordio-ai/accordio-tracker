@@ -141,7 +141,7 @@ The connector reads, logs, and drafts. It never sends, signs, or deletes anythin
 
 ## The chat companion
 
-The app also carries a chat tab that talks to your Accordio account, so you can ask what you worked on, start and stop timers by name, and pull up recent work without opening the dashboard. It is a convenience on top of the tracker, not the reason the tracker exists.
+The app also carries a chat tab that talks to your Accordio account, so you can ask what you worked on, start and stop timers by name, and pull up recent work without opening the dashboard. When a turn creates something with a page of its own, a contract, an invoice, a client, a preview card appears under the tool call and opens it in the web app. It is a convenience on top of the tracker, not the reason the tracker exists.
 
 ---
 
@@ -167,7 +167,7 @@ SKIP_NOTARIZE=true npx electron-builder --mac --arm64
 
 Output lands in `release/`. Without an Apple Developer ID the build ad-hoc signs itself, which is fine locally and will be refused by Gatekeeper on anyone else's Mac. Signing and notarization are driven entirely by environment variables, documented in `.env.example`. There are no credentials in this repository.
 
-`npm test` runs the typechecker, 58 unit tests covering duration maths and the meeting state machine, and a production build.
+`npm test` runs the typechecker, 115 unit tests covering duration maths, the meeting state machine and the chat's artifact cards, and a production build.
 
 ---
 

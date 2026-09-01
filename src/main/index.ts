@@ -4,10 +4,6 @@
  * Main process entry point for the Electron menu bar application.
  */
 
-// Must stay the first import — renames the old "Accordio AGI" userData dir
-// before store.ts (electron-store) resolves it as a module side effect.
-import './migrate-userdata';
-
 import { initSentry, captureException, setUser, addBreadcrumb } from './sentry';
 
 import { app, globalShortcut, ipcMain, nativeImage, systemPreferences, dialog, shell, Menu, powerMonitor, desktopCapturer } from 'electron';

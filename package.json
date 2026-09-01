@@ -1,6 +1,6 @@
 {
   "name": "accordio-agi",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "Accordio AI - your business copilot in the menu bar",
   "main": "dist/main/index.js",
   "author": "Accordio",

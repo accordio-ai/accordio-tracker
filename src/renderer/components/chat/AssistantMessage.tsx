@@ -13,9 +13,11 @@
 
 import MarkdownRenderer from './MarkdownRenderer';
 import { ToolCard } from './ToolCard';
+import { ArtifactCard } from './ArtifactCard';
 import { ReasoningBlock } from './ReasoningBlock';
 import type { AgiMessage } from '../../lib/chat/types';
 import { isToolPart, toolNameOf } from '../../lib/chat/parts';
+import { resolveArtifact } from '../../lib/chat/artifacts';
 
 interface AssistantMessageProps {
   message: AgiMessage;
@@ -48,18 +50,26 @@ export function AssistantMessage({ message, isStreaming, isLast }: AssistantMess
         <div className="mb-2 flex w-full flex-col gap-2">
           {toolParts.map((part, i) => {
             const previous = i > 0 ? toolParts[i - 1] : undefined;
+            const name = toolNameOf(part);
+            // A finished tool that left something openable (a contract, an
+            // invoice, a client) gets a preview card under its status row.
+            const artifact =
+              part.state === 'output-available' ? resolveArtifact(name, part.output, part.input) : null;
+            const key = part.toolCallId ?? `${message.id}-tool-${i}`;
             return (
-              <ToolCard
-                key={part.toolCallId ?? `${message.id}-tool-${i}`}
-                toolName={toolNameOf(part)}
-                state={part.state}
-                errorText={part.errorText}
-                // Only the live turn's last message can still be processing;
-                // anything else in a pending state was interrupted.
-                turnIsLive={isStreaming && isLast}
-                // Consecutive cards for the same tool get a connector line.
-                connectedToPrevious={previous ? toolNameOf(previous) === toolNameOf(part) : false}
-              />
+              <div key={key} className="flex flex-col gap-2">
+                <ToolCard
+                  toolName={name}
+                  state={part.state}
+                  errorText={part.errorText}
+                  // Only the live turn's last message can still be processing;
+                  // anything else in a pending state was interrupted.
+                  turnIsLive={isStreaming && isLast}
+                  // Consecutive cards for the same tool get a connector line.
+                  connectedToPrevious={previous ? toolNameOf(previous) === name : false}
+                />
+                {artifact && <ArtifactCard artifact={artifact} />}
+              </div>
             );
           })}
         </div>
