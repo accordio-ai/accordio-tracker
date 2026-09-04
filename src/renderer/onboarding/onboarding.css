@@ -1,0 +1,1612 @@
+/* ========================================================================
+   Setup window
+   ------------------------------------------------------------------------
+   A fixed 1200x750 surface split down the middle: a light story panel on
+   the left, a dark mockup panel on the right. Everything is scoped under
+   `.ob-` so it never leaks into the popover's stylesheet and vice versa.
+   Colours are deliberately literal — the window has one look regardless of
+   the theme the user picks for the app itself.
+   ======================================================================== */
+
+.ob-root {
+  --ob-ink: #1a1f1c;
+  --ob-ink-2: #344e41;
+  --ob-muted: #5a655c;
+  --ob-muted-2: #8a958c;
+  --ob-line: #e2e8e4;
+  --ob-green: #78d277;
+  --ob-green-deep: #3e8a47;
+  --ob-green-soft: #e2f0e2;
+  --ob-mint: #a9e0a4;
+  --ob-dark: #0a0a0a;
+  --ob-dark-card: #151a17;
+  --ob-dark-raised: #1f2622;
+  --ob-radius: 14px;
+
+  position: fixed;
+  inset: 0;
+  display: flex;
+  overflow: hidden;
+  background: #ffffff;
+  color: var(--ob-ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* Window chrome is hidden; this strip is what the user grabs to move it. */
+.ob-drag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  -webkit-app-region: drag;
+  z-index: 5;
+}
+.ob-drag * {
+  -webkit-app-region: no-drag;
+}
+
+/* ── Light story panel ─────────────────────────────────────────────────── */
+.ob-left {
+  position: relative;
+  width: 600px;
+  flex: none;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 112px 72px 140px;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* Persistent frame layers. The left frame widens to the full window on the
+   splash and settles to the story column afterwards; the right frame fades
+   in behind the mockups. Both stay mounted across steps. */
+.ob-frame-left {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 600px;
+  overflow: hidden;
+  background: #ffffff;
+  transition: width 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ob-root--splash .ob-frame-left {
+  width: 100%;
+}
+.ob-frame-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 600px;
+  overflow: hidden;
+  background: var(--ob-dark);
+  opacity: 1;
+  transition: opacity 0.45s ease;
+}
+.ob-root--splash .ob-frame-right {
+  opacity: 0;
+  pointer-events: none;
+}
+.ob-frame-left .ob-blob {
+  position: absolute;
+  z-index: 0;
+}
+.ob-frame-left::before {
+  content: '';
+  position: absolute;
+  inset: -50% -30% auto -40%;
+  height: 150%;
+  background: repeating-radial-gradient(
+    circle at 28% 34%,
+    rgba(52, 78, 65, 0.075) 0 1px,
+    rgba(52, 78, 65, 0) 1px 92px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+.ob-frame-left::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+  pointer-events: none;
+}
+.ob-root--splash .ob-frame-left .ob-blob {
+  filter: blur(110px);
+}
+.ob-root--splash .ob-frame-left .ob-blob--1 { left: 12%; top: 6%; width: 44%; height: 66%; }
+.ob-root--splash .ob-frame-left .ob-blob--2 { left: 34%; top: 22%; width: 40%; height: 60%; }
+.ob-root--splash .ob-frame-left .ob-blob--3 { right: 4%; bottom: -6%; width: 40%; height: 56%; }
+.ob-root--splash .ob-frame-left .ob-blob--4 { right: 6%; top: -4%; width: 34%; height: 44%; }
+.ob-root--splash .ob-frame-left .ob-blob--5 { left: -4%; bottom: -6%; width: 30%; height: 44%; }
+.ob-frame-left .ob-blob {
+  transition: left 0.55s ease, top 0.55s ease, right 0.55s ease, bottom 0.55s ease, width 0.55s ease, height 0.55s ease;
+}
+
+.ob-nav--frame {
+  position: absolute;
+  left: 72px;
+  width: 456px;
+  bottom: 72px;
+  z-index: 6;
+  margin-top: 0;
+}
+.ob-left.ob-left--full {
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0;
+}
+/* Organic colour wash: a few big, heavily blurred blobs in the heading-mesh
+   palette (#00e275 · #78d277 · #b8f0a0 · #e0f5a0) rather than flat gradients. Positions mirror the reference (cool
+   top-left, saturated centre, warm bottom-right). */
+.ob-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  pointer-events: none;
+  will-change: transform;
+}
+.ob-blob--1 {
+  left: -8%;
+  top: 4%;
+  width: 62%;
+  height: 58%;
+  background: rgba(184, 240, 160, 0.95);
+}
+.ob-blob--2 {
+  left: 22%;
+  top: 26%;
+  width: 62%;
+  height: 56%;
+  background: rgba(120, 210, 119, 0.7);
+}
+.ob-blob--3 {
+  right: -14%;
+  bottom: -10%;
+  width: 64%;
+  height: 54%;
+  background: rgba(224, 245, 160, 1);
+}
+.ob-blob--4 {
+  right: -6%;
+  top: -12%;
+  width: 46%;
+  height: 40%;
+  background: rgba(0, 226, 117, 0.28);
+}
+.ob-blob--5 {
+  left: -12%;
+  bottom: -8%;
+  width: 44%;
+  height: 40%;
+  background: rgba(224, 245, 160, 0.9);
+}
+.ob-left > * {
+  position: relative;
+  z-index: 2;
+}
+.ob-left > .ob-blob {
+  position: absolute;
+  z-index: 0;
+}
+
+.ob-title {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1.15;
+  font-weight: 400;
+  letter-spacing: -0.022em;
+  color: var(--ob-ink);
+}
+.ob-title .ob-title-muted {
+  color: #6f7a72;
+}
+.ob-subtitle {
+  margin: 18px 0 0;
+  max-width: 400px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ob-muted);
+}
+.ob-subtitle em {
+  font-style: italic;
+  color: var(--ob-ink);
+}
+.ob-body {
+  margin-top: 40px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Bottom navigation */
+.ob-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: auto;
+}
+.ob-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.ob-btn {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+.ob-btn:active {
+  transform: translateY(1px);
+}
+.ob-btn:disabled {
+  cursor: default;
+  transform: none;
+}
+.ob-btn-next {
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 999px;
+  background: var(--ob-ink);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  box-shadow: 0 8px 24px -12px rgba(26, 31, 28, 0.6);
+}
+.ob-btn-next:hover:not(:disabled) {
+  background: #0f1411;
+}
+.ob-btn-next:disabled {
+  background: #cfd6d1;
+  color: #ffffff;
+  box-shadow: none;
+}
+.ob-btn-next .ob-kbd {
+  opacity: 0.7;
+}
+.ob-btn-back {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ob-ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+.ob-btn-back:hover {
+  background: rgba(26, 31, 28, 0.05);
+}
+.ob-btn-text {
+  height: 44px;
+  padding: 0 4px;
+  background: transparent;
+  color: var(--ob-muted-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+.ob-btn-text:hover {
+  color: var(--ob-muted);
+}
+.ob-btn-accent {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--ob-green);
+  color: #0f1411;
+  font-size: 12px;
+  font-weight: 500;
+}
+.ob-btn-accent:hover:not(:disabled) {
+  background: #6ac669;
+}
+.ob-btn-dark {
+  height: 40px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--ob-ink);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 300px;
+  box-shadow: 0 10px 28px -14px rgba(26, 31, 28, 0.7);
+}
+.ob-btn-dark:hover:not(:disabled) {
+  background: #0f1411;
+}
+.ob-btn-dark.ob-btn-waiting,
+.ob-btn-dark.ob-btn-waiting:hover {
+  background: #4a524d;
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: none;
+}
+
+.ob-kbd {
+  display: inline-flex;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Mute toggle: dark square, top-right of the story panel. */
+.ob-mute {
+  /* Sits inside the window-drag strip; draggable regions are rect-based, so
+     without this the strip swallows the click and the button drags the window. */
+  -webkit-app-region: no-drag;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #1a1f1c;
+  color: #ffffff;
+  z-index: 6;
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+}
+.ob-mute:hover {
+  background: #0f1411;
+}
+.ob-mute.ob-mute--off {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ── Dark mockup panel ─────────────────────────────────────────────────── */
+.ob-right {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+}
+.ob-dotpanel {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--ob-dark);
+}
+.ob-dotpanel-bg {
+  position: absolute;
+  inset: 0;
+}
+.ob-dotpanel-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 78% 72% at 50% 50%, #0a0a0a 0%, #0a0a0a 42%, rgba(10, 10, 10, 0.85) 64%, rgba(10, 10, 10, 0) 94%),
+    linear-gradient(180deg, rgba(10, 10, 10, 0) 50%, rgba(10, 10, 10, 0.8) 78%, #0a0a0a 100%);
+}
+.ob-dotpanel-fallback {
+  background-size: 26px 26px;
+}
+.ob-dotpanel-fallback {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(120, 210, 119, 0.28) 1px, transparent 1.4px);
+  background-size: 18px 18px;
+  opacity: 0.6;
+}
+.ob-dotpanel-content {
+  position: absolute;
+  inset: 0;
+}
+
+/* ── Sign-in splash ─────────────────────────────────────────────────────── */
+.ob-splash-icon {
+  width: 108px;
+  height: 108px;
+  filter: drop-shadow(0 18px 30px rgba(26, 31, 28, 0.22));
+}
+.ob-splash-title {
+  margin: 56px 0 0;
+  font-size: 40px;
+  line-height: 1.1;
+  font-weight: 400;
+  letter-spacing: -0.022em;
+  color: #2a302c;
+}
+.ob-splash-sub {
+  margin: 16px auto 0;
+  max-width: 420px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  color: var(--ob-muted);
+}
+.ob-splash-actions {
+  margin-top: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.ob-terms {
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+  color: var(--ob-muted);
+}
+.ob-terms a,
+.ob-link {
+  color: var(--ob-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+}
+.ob-error {
+  font-size: 12.5px;
+  color: #d0443c;
+}
+
+.ob-email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 300px;
+}
+.ob-input {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--ob-line);
+  background: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ob-ink);
+  outline: none;
+  width: 100%;
+}
+.ob-input:focus {
+  border-color: var(--ob-green);
+  box-shadow: 0 0 0 3px rgba(120, 210, 119, 0.22);
+}
+.ob-code-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.ob-code-row .ob-input {
+  width: 44px;
+  height: 48px;
+  border-radius: 999px;
+  padding: 0;
+  text-align: center;
+  font-size: 18px;
+}
+
+/* ── Feature pills (welcome) ─────────────────────────────────────────── */
+.ob-pills {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.ob-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 42px;
+  padding: 0 14px 0 6px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 6px 20px -12px rgba(26, 31, 28, 0.35), 0 0 0 1px rgba(26, 31, 28, 0.04);
+  font-size: 13px;
+  color: var(--ob-ink-2);
+  backdrop-filter: blur(6px);
+}
+.ob-pill strong {
+  font-weight: 600;
+  color: var(--ob-ink);
+}
+.ob-pill-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex: none;
+}
+.ob-pill--active {
+  background: #ffffff;
+}
+.ob-pill--active::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 13px;
+  padding: 1px;
+  background: linear-gradient(120deg, var(--ob-green), #ffd6a8 60%, var(--ob-mint));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ── Theme cards ────────────────────────────────────────────────────────── */
+.ob-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 212px);
+  gap: 18px 16px;
+}
+.ob-theme-card {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  color: var(--ob-ink);
+}
+.ob-theme-thumb {
+  position: relative;
+  width: 212px;
+  height: 132px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 28px -16px rgba(26, 31, 28, 0.5), 0 0 0 1px rgba(26, 31, 28, 0.06);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.ob-theme-card:hover .ob-theme-thumb {
+  transform: translateY(-1px);
+}
+.ob-theme-card--selected .ob-theme-thumb {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--ob-green), 0 12px 30px -16px rgba(26, 31, 28, 0.5);
+}
+.ob-theme-label {
+  display: block;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--ob-ink);
+}
+
+/* ── Permission cards ──────────────────────────────────────────────────── */
+.ob-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ob-card {
+  display: flex;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 30px -18px rgba(26, 31, 28, 0.45), 0 0 0 1px rgba(26, 31, 28, 0.04);
+  backdrop-filter: blur(6px);
+}
+.ob-card-icon {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ob-card-body {
+  flex: 1;
+  min-width: 0;
+}
+.ob-card-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ob-ink);
+}
+.ob-card-desc {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ob-muted);
+}
+.ob-card-actions {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ob-granted {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(120, 210, 119, 0.16);
+  color: #2f7a36;
+  font-size: 12px;
+  font-weight: 500;
+}
+.ob-card-side {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Radio rows (tracking) ─────────────────────────────────────────────── */
+.ob-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ob-radio {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 62px;
+  padding: 0 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 30px -18px rgba(26, 31, 28, 0.45), 0 0 0 1px rgba(26, 31, 28, 0.04);
+  color: var(--ob-ink);
+  font-size: 13.5px;
+  text-align: left;
+  transition: box-shadow 0.15s ease;
+}
+.ob-radio strong {
+  font-weight: 600;
+}
+.ob-radio--on {
+  box-shadow: 0 0 0 1px var(--ob-green), 0 0 0 4px rgba(120, 210, 119, 0.18), 0 10px 30px -18px rgba(26, 31, 28, 0.45);
+}
+.ob-radio-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid #cfd6d1;
+  background: #ffffff;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ob-radio--on .ob-radio-dot {
+  border-color: var(--ob-green);
+  background: var(--ob-green);
+}
+.ob-radio--on .ob-radio-dot::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+/* ── Toggle rows (almost ready) ────────────────────────────────────────── */
+.ob-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 30px -18px rgba(26, 31, 28, 0.45), 0 0 0 1px rgba(26, 31, 28, 0.04);
+}
+.ob-toggle-row .ob-card-body {
+  flex: 1;
+}
+.ob-switch {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+  background: #d9dfdb;
+  cursor: pointer;
+  flex: none;
+  transition: background 0.2s ease;
+}
+.ob-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.ob-switch--on {
+  background: var(--ob-green);
+}
+.ob-switch--on::after {
+  transform: translateX(20px);
+}
+
+/* ── Trial ─────────────────────────────────────────────────────────────── */
+/* The plan card, after the reference: bleeds off the left edge, saturated
+   brand green on the left washing to white on the right, and the app icon
+   as a big tilted glass slab hanging over the bottom-right corner. */
+.ob-legend-card {
+  position: relative;
+  margin-left: -72px;
+  width: 540px;
+  height: 240px;
+  border-radius: 0 22px 22px 0;
+  overflow: hidden;
+  background:
+    radial-gradient(80% 120% at 100% 0%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 55%),
+    linear-gradient(100deg, #5cc27a 0%, #8fde8f 34%, #c9efc6 60%, #f2faf0 82%, #ffffff 100%);
+  box-shadow: 0 30px 60px -30px rgba(52, 78, 65, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.ob-legend-copy {
+  position: absolute;
+  left: 40px;
+  top: 40px;
+  width: 300px;
+}
+.ob-legend-kicker {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f5f2f;
+}
+.ob-legend-title {
+  margin: 14px 0 0;
+  font-size: 30px;
+  line-height: 1.12;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(31, 95, 47, 0.25);
+}
+.ob-legend-tags {
+  position: absolute;
+  left: 40px;
+  bottom: 28px;
+  display: flex;
+  gap: 10px;
+}
+.ob-tag {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1f1c;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(6px);
+}
+.ob-legend-art {
+  position: absolute;
+  right: -44px;
+  top: 38px;
+  width: 236px;
+  height: 236px;
+  transform: rotate(-14deg);
+  filter: drop-shadow(0 30px 40px rgba(31, 95, 47, 0.35)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.12));
+}
+.ob-legend-art img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  max-width: none;
+}
+
+/* ── First moment ──────────────────────────────────────────────────────── */
+.ob-left--centered {
+  align-items: center;
+  text-align: center;
+  padding-top: 112px;
+}
+.ob-left--centered .ob-subtitle {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 440px;
+}
+.ob-left--centered .ob-nav {
+  width: 100%;
+}
+.ob-walk {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ob-walk-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.ob-walk-foot {
+  padding: 0 70px 60px;
+}
+.ob-walk-bars {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 44px;
+}
+.ob-walk-bar {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  width: 58px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(120, 210, 119, 0.22);
+  overflow: hidden;
+}
+.ob-walk-bar > span {
+  position: absolute;
+  inset: 0;
+  background: var(--ob-green);
+  transform-origin: left center;
+}
+.ob-walk-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  color: #ffffff;
+}
+.ob-walk-desc {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.62);
+  max-width: 360px;
+}
+.ob-walk-desc em {
+  font-style: italic;
+  color: #ffffff;
+}
+.ob-walk-info {
+  position: absolute;
+  top: 22px;
+  left: 22px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── Keycaps ───────────────────────────────────────────────────────────── */
+.ob-keycap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #3a423d 0%, #262d29 55%, #1f2622 100%);
+  box-shadow:
+    0 8px 0 #0b0f0c,
+    0 18px 30px -12px rgba(0, 0, 0, 0.85),
+    0 0 50px -6px rgba(120, 210, 119, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.4);
+  color: #ffffff;
+  font-weight: 500;
+  text-shadow: 0 0 12px rgba(120, 210, 119, 0.6);
+}
+.ob-keycap-sym {
+  font-size: 20px;
+  line-height: 1;
+}
+.ob-keycap-label {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* ── Floating helper panels (own windows) ─────────────────────────────── */
+.ob-float {
+  position: fixed;
+  inset: 0;
+  padding: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+.ob-float-card {
+  height: 100%;
+  border-radius: 18px;
+  background: rgba(30, 32, 30, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  padding: 14px 16px 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ob-float-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.72);
+}
+.ob-float-head strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+.ob-float-close {
+  appearance: none;
+  border: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.ob-float-close:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+.ob-float-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 14px 0 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: grab;
+  transition: background 0.15s ease;
+}
+.ob-float-row:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
+.ob-float-row:active {
+  cursor: grabbing;
+}
+.ob-float-row .ob-float-grip {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.ob-hint-card {
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgba(30, 32, 30, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ob-hint-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.ob-hint-sub {
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(255, 255, 255, 0.62);
+}
+.ob-hint-keys {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.ob-hint-key {
+  min-width: 52px;
+  height: 46px;
+  padding: 0 10px;
+  flex: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.ob-hint-key b {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+
+/* Scrollable tracker body inside the interactive popover mockup. */
+.ob-popover-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 128, 128, 0.35) transparent;
+}
+.ob-popover-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.ob-popover-scroll::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.35);
+  border-radius: 3px;
+}
+
+/* ── Connect-your-AI button (first moment) ─────────────────────────────── */
+.ob-connect {
+  margin: 8px auto 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  height: 76px;
+  padding: 0 22px 0 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ob-ink);
+  box-shadow: 0 16px 40px -20px rgba(26, 31, 28, 0.5), 0 0 0 1px rgba(26, 31, 28, 0.05);
+  backdrop-filter: blur(8px);
+  text-align: left;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.ob-connect:hover {
+  box-shadow: 0 20px 44px -20px rgba(26, 31, 28, 0.55), 0 0 0 1px rgba(120, 210, 119, 0.6);
+}
+.ob-connect--open {
+  box-shadow: 0 0 0 1px var(--ob-green), 0 0 0 5px rgba(120, 210, 119, 0.2), 0 16px 40px -20px rgba(26, 31, 28, 0.5);
+}
+.ob-connect-stack {
+  display: inline-flex;
+  align-items: center;
+}
+.ob-connect-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 12px -4px rgba(26, 31, 28, 0.35), 0 0 0 1px rgba(26, 31, 28, 0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -12px;
+  color: var(--ob-ink);
+}
+.ob-connect-avatar:first-child {
+  margin-left: 0;
+}
+.ob-connect-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ob-connect-copy strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.ob-connect-copy span {
+  font-size: 12.5px;
+  color: var(--ob-muted);
+}
+.ob-connect-arrow {
+  margin-left: 6px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--ob-ink);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Idle state of the panel before the button is pressed */
+.ob-mcp-idle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+.ob-mcp-idle-mark {
+  width: 120px;
+  height: 120px;
+  border-radius: 34px;
+  background: linear-gradient(180deg, #2b322d 0%, #1c211e 55%, #151a17 100%);
+  box-shadow:
+    0 10px 0 #0b0f0c,
+    0 40px 60px -22px rgba(0, 0, 0, 0.95),
+    0 0 70px -10px rgba(120, 210, 119, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.45);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ob-green);
+  filter: drop-shadow(0 0 10px rgba(120, 210, 119, 0.35));
+  position: relative;
+  z-index: 1;
+}
+.ob-mcp-idle-orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  margin-top: -70px;
+  animation: ob-orbit 40s linear infinite;
+}
+@keyframes ob-orbit {
+  to { transform: rotate(360deg); }
+}
+.ob-mcp-idle-host {
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffffff 0%, #eef2ee 60%, #d8dfd9 100%);
+  color: var(--ob-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 4px 0 #b9c1ba,
+    0 14px 24px -8px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.08);
+}
+.ob-mcp-idle-text {
+  margin-top: 150px;
+  text-align: center;
+}
+.ob-mcp-idle-text .ob-walk-desc {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── MCP setup rail (replica of Settings → MCP server) ────────────────── */
+.ob-mcp-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 28px 30px 32px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+.ob-mcp-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.ob-mcp-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+.ob-mcp {
+  color: #f0f4f1;
+  font-size: 13px;
+  -webkit-app-region: no-drag;
+}
+.ob-mcp-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+.ob-mcp-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #1a1f1c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--ob-green);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ob-mcp-kicker {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+.ob-mcp-h1 {
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.ob-mcp-step {
+  display: flex;
+  gap: 18px;
+}
+.ob-mcp-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 5px;
+}
+.ob-mcp-node {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  background: #0a0a0a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f1411;
+  flex: none;
+  transition: all 0.2s ease;
+}
+.ob-mcp-node--active {
+  border-color: var(--ob-green);
+  box-shadow: 0 0 0 4px rgba(120, 210, 119, 0.2);
+}
+.ob-mcp-node--done {
+  border-color: var(--ob-green);
+  background: var(--ob-green);
+}
+.ob-mcp-line {
+  width: 1px;
+  flex: 1;
+  margin: 8px 0;
+  background: rgba(255, 255, 255, 0.12);
+}
+.ob-mcp-body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 30px;
+}
+.ob-mcp-body--last {
+  padding-bottom: 8px;
+}
+.ob-mcp-title {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+  text-align: left;
+}
+.ob-mcp-title--upcoming {
+  color: rgba(255, 255, 255, 0.4);
+}
+.ob-mcp-title--done {
+  cursor: pointer;
+}
+.ob-mcp-tick {
+  color: var(--ob-green);
+  display: inline-flex;
+}
+.ob-mcp-desc {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.5;
+}
+.ob-mcp-card {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #151a17;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ob-mcp-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -4px;
+  padding: 0 4px 4px;
+}
+.ob-mcp-tabs::-webkit-scrollbar {
+  display: none;
+}
+.ob-mcp-tab {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ob-mcp-tab:hover {
+  color: #ffffff;
+}
+.ob-mcp-tab--on {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+.ob-mcp-snippet-label {
+  margin: 16px 0 10px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.5;
+}
+.ob-mcp-code {
+  position: relative;
+  border-radius: 12px;
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 84px 12px 14px;
+}
+.ob-mcp-code pre {
+  margin: 0;
+  font: 12.5px/1.55 'SF Mono', Menlo, monospace;
+  color: #e6ede7;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
+.ob-mcp-copy {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font: inherit;
+  cursor: pointer;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+}
+.ob-mcp-copy:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.ob-mcp-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+}
+.ob-mcp-primary {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f1411;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 8px;
+}
+.ob-mcp-primary:hover {
+  background: #e8efe9;
+}
+.ob-mcp-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+}
+.ob-mcp-link:hover {
+  color: #ffffff;
+}
+/* In-progress rows: spinner, two-line status, action on the right. */
+.ob-mcp-waitrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ob-mcp-waitrow--after {
+  margin-top: 16px;
+}
+.ob-mcp-waitcopy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ob-mcp-waitcopy strong {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #ffffff;
+}
+.ob-mcp-waitcopy span {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+.ob-mcp-waitrow .ob-mcp-link {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.75);
+}
+.ob-mcp-waitrow .ob-mcp-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+.ob-mcp-spinner {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(120, 210, 119, 0.22);
+  border-top-color: var(--ob-green);
+  animation: ob-spin 0.9s linear infinite;
+}
+@keyframes ob-spin {
+  to { transform: rotate(360deg); }
+}
+.ob-mcp-fine {
+  margin: 16px 0 0;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.5;
+}
+
+/* Stage-one art inside the walkthrough: orbit sits in the upper stage area. */
+.ob-mcp-idle--stage {
+  inset: 0 0 auto 0;
+  height: 440px;
+}
+.ob-mcp-idle--stage .ob-mcp-idle-orbit {
+  margin-top: 0;
+}
+
+/* Brand mark pour-in, mirroring the popover's empty state on load. */
+.ob-pour svg {
+  animation: ob-pour-spring 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.ob-pour-fill {
+  transform: translateY(19px);
+  animation: ob-pour-down 1s cubic-bezier(0.4, 0, 0.2, 1) 0.1s backwards;
+}
+.ob-pour-shimmer {
+  animation: ob-pour-shimmer 1s cubic-bezier(0.4, 0, 0.2, 1) 0.1s backwards;
+  opacity: 0;
+}
+@keyframes ob-pour-down {
+  from { transform: translateY(0); }
+  to { transform: translateY(19px); }
+}
+@keyframes ob-pour-shimmer {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes ob-pour-spring {
+  0% { transform: scale(0.85); }
+  100% { transform: scale(1); }
+}
+
+/* ── Trial phone (landing page mockup) ─────────────────────────────────── */
+.ob-phone-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 26px;
+}
+/* The phone is scaled from its top edge, so pull the switcher up by the
+   height the scale gave back and keep it clear of the drag strip. */
+.ob-phone-stage .ob-phone-tabs {
+  -webkit-app-region: no-drag;
+  position: relative;
+  z-index: 5;
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ob-phone-pill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ob-phone-tab {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+.ob-phone-tab:hover {
+  color: rgba(255, 255, 255, 0.75);
+}
+.ob-phone-tab--on {
+  color: #ffffff;
+}
+.ob-phone-wrap {
+  width: 380px;
+  transform: scale(0.8);
+  transform-origin: top center;
+  /* Scaled from the top, so give back the 20% of layout height the scale
+     removed and the switcher lands right under the phone. */
+  margin-bottom: -128px;
+  filter: drop-shadow(0 40px 60px rgba(0, 0, 0, 0.7));
+}
+
+/* Working Now row swap in the tracker showcase */
+.ob-track-appear {
+  animation: ob-track-appear 0.35s ease;
+}
+@keyframes ob-track-appear {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

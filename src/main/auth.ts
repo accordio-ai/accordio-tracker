@@ -93,6 +93,19 @@ function decryptValue(stored: string | undefined): string | null {
 let migrationDone = false;
 function migrateLegacyTokens(): void {
   if (migrationDone) return;
+
+  // Nothing to migrate → never touch the keychain. safeStorage's first use
+  // opens the app's Keychain item, and on a fresh install that is exactly
+  // the "wants to use your confidential information" password prompt users
+  // met on first launch. A signed-out app has no reason to ask.
+  const hasLegacy = [legacyV2Store, legacyV1Store].some(
+    (src) => !!src.get(AUTH_TOKEN_KEY) || !!src.get(REFRESH_TOKEN_KEY)
+  );
+  if (!hasLegacy) {
+    migrationDone = true;
+    return;
+  }
+
   if (!canEncrypt()) return; // Try again on the next call once app is ready.
   migrationDone = true;
 
@@ -138,7 +151,9 @@ function migrateLegacyTokens(): void {
 export async function getToken(): Promise<string | null> {
   try {
     migrateLegacyTokens();
-    return decryptValue(tokenStore.get(AUTH_TOKEN_KEY) as string | undefined);
+    const stored = tokenStore.get(AUTH_TOKEN_KEY) as string | undefined;
+    if (!stored) return null; // decryptValue would consult the keychain
+    return decryptValue(stored);
   } catch (error) {
     logger.error('[Auth] Failed to get token:', error);
     return null;
@@ -182,7 +197,9 @@ export async function isAuthenticated(): Promise<boolean> {
 export async function getRefreshToken(): Promise<string | null> {
   try {
     migrateLegacyTokens();
-    return decryptValue(tokenStore.get(REFRESH_TOKEN_KEY) as string | undefined);
+    const stored = tokenStore.get(REFRESH_TOKEN_KEY) as string | undefined;
+    if (!stored) return null;
+    return decryptValue(stored);
   } catch (error) {
     logger.error('[Auth] Failed to get refresh token:', error);
     return null;

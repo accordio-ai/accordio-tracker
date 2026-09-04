@@ -82,6 +82,14 @@ interface StoreSchema {
   permissionsUserSkipped?: boolean;
   // Legacy flag (kept for migration, will be removed in future)
   permissionsGranted?: boolean;
+
+  // First-run setup window (main/onboarding-windows.ts). Undefined on installs
+  // that predate it — treated as completed when a token already exists.
+  onboardingCompleted?: boolean;
+  // Set right before the post-setup relaunch so the popover opens on boot.
+  resumeAfterRelaunch?: boolean;
+  // Background update downloads, chosen in setup. Undefined means on.
+  autoUpdate?: boolean;
 }
 
 

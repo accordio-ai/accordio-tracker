@@ -13,7 +13,7 @@ import { useUnifiedContext } from './hooks/useUnifiedContext';
 import ActivityHub from './components/ActivityHub';
 import { IntegrationGrid } from './components/IntegrationGrid';
 import { MessageList } from './components/chat/MessageList';
-import Onboarding, { QA_ONBOARDING_STEP } from './components/Onboarding';
+import { SignInPrompt } from './components/SignInPrompt';
 import ChannelSetupModal from './components/ChannelSetupModal';
 import { Composer } from './components/chat/Composer';
 import { MemorySheet } from './components/MemorySheet';
@@ -385,13 +385,6 @@ export default function App() {
     return cleanup;
   }, []);
 
-  // Handle onboarding completion
-  const handleOnboardingComplete = async () => {
-    const token = await window.electron.auth.getToken();
-    setAuthToken(token);
-    setIsAuthenticated(true);
-  };
-
   // Load saved settings
   useEffect(() => {
     const loadSettings = async () => {
@@ -443,12 +436,12 @@ export default function App() {
     );
   }
 
-  // Show onboarding if not authenticated (or dev QA forced a step — see
-  // QA_ONBOARDING_STEP in Onboarding.tsx)
-  if (!isAuthenticated || QA_ONBOARDING_STEP) {
+  // Signed out: the popover only points at the setup window, which owns
+  // sign-in and first-run configuration (see onboarding/OnboardingWindow).
+  if (!isAuthenticated) {
     return (
       <div className={`app ${isDarkMode ? 'dark' : 'light'}`}>
-        <Onboarding onComplete={handleOnboardingComplete} />
+        <SignInPrompt />
       </div>
     );
   }

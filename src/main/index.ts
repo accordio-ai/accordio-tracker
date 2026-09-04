@@ -4,9 +4,11 @@
  * Main process entry point for the Electron menu bar application.
  */
 
+// Must stay the first import: switches userData before any store is built.
+import './dev-user-data';
 import { initSentry, captureException, setUser, addBreadcrumb } from './sentry';
 
-import { app, globalShortcut, ipcMain, nativeImage, systemPreferences, dialog, shell, Menu, powerMonitor, desktopCapturer } from 'electron';
+import { app, globalShortcut, ipcMain, nativeImage, nativeTheme, systemPreferences, dialog, shell, Menu, powerMonitor, desktopCapturer } from 'electron';
 import { menubar } from 'menubar';
 import path from 'path';
 import * as fs from 'fs';
@@ -26,6 +28,19 @@ import {
   setMemories,
 } from './store';
 import { AGIApiClient, ApiError } from './api';
+import {
+  configureOnboardingWindows,
+  openOnboardingWindow,
+  closeOnboardingWindows,
+  isOnboardingOpen,
+  showDragHelper,
+  hideDragHelper,
+  appBundlePath,
+  appDragIcon,
+  showHotkeyHint,
+  hideHotkeyHint,
+  sendToOnboardingWindows,
+} from './onboarding-windows';
 
 /** Why a `projects:list` call failed — lets the renderer say something true. */
 type ProjectsListErrorCode =
@@ -66,6 +81,11 @@ process.on('unhandledRejection', (reason) => {
 // Dev-only: expose CDP so the renderer can be inspected/screenshotted while QA'ing
 if (!app.isPackaged) {
   app.commandLine.appendSwitch('remote-debugging-port', '9223');
+  // Unsigned dev binaries can't reuse the "Electron Safe Storage" Keychain
+  // item another dev build created, so macOS asks for the login password on
+  // every fresh profile. The mock keychain sidesteps that in development;
+  // packaged builds are signed and open their own item silently.
+  app.commandLine.appendSwitch('use-mock-keychain');
 }
 
 // Prevent multiple instances
@@ -77,6 +97,16 @@ if (!gotTheLock) {
 let mb: ReturnType<typeof menubar> | null = null;
 let apiClient: AGIApiClient | null = null;
 let activeShortcut: string | null = null;
+
+/**
+ * Events the popover and the setup window both care about (permission
+ * changes, session expiry). The setup window lives in its own BrowserWindow,
+ * so a send to `mb.window` alone would never reach it.
+ */
+const sendToRenderers = (channel: string, ...args: unknown[]) => {
+  mb?.window?.webContents.send(channel, ...args);
+  sendToOnboardingWindows(channel, ...args);
+};
 
 function isAllowedExternalUrl(rawUrl: string): boolean {
   try {
@@ -122,6 +152,7 @@ const registerToggleShortcut = (shortcut: string): boolean => {
   }
 
   const registered = globalShortcut.register(shortcut, () => {
+    hideHotkeyHint();
     if (menubarInstance.window?.isVisible()) {
       menubarInstance.hideWindow();
     } else {
@@ -168,6 +199,13 @@ const createMenubar = () => {
       alwaysOnTop: false,
     },
     showDockIcon: false,
+  });
+
+  configureOnboardingWindows({
+    preloadPath: path.join(__dirname, '../preload/index.js'),
+    iconPath: getAssetPath('icon.png'),
+    isAllowedExternalUrl,
+    isAllowedNavigation,
   });
 
   mb.on('ready', () => {
@@ -286,6 +324,8 @@ const createMenubar = () => {
 
     // Start permission polling to detect changes and prompt for restart
     startPermissionPolling();
+
+    void routeFirstRun();
   });
 
   mb.on('after-show', () => {
@@ -370,6 +410,36 @@ const createMenubar = () => {
 };
 
 /**
+ * Decide what the user sees on launch: the setup window (signed out, or setup
+ * never finished) or nothing until they click the tray icon.
+ */
+const routeFirstRun = async () => {
+  const token = await getToken();
+
+  // Installs that predate the setup window are already signed in and
+  // configured — never replay setup at them on update.
+  if (token && store.get('onboardingCompleted') === undefined) {
+    store.set('onboardingCompleted', true);
+  }
+
+  if (store.get('resumeAfterRelaunch')) {
+    store.delete('resumeAfterRelaunch');
+    mb?.showWindow();
+    showHotkeyHint(store.get('globalShortcut') || 'CommandOrControl+Shift+A');
+    return;
+  }
+
+  const forced = process.env.ACCORDIO_FORCE_ONBOARDING === '1';
+  if (forced || !token || !store.get('onboardingCompleted')) {
+    try {
+      await openOnboardingWindow();
+    } catch (error) {
+      logger.error('[Onboarding] Failed to open setup window:', error);
+    }
+  }
+};
+
+/**
  * Handle session refresh when token expires (401) or proactively before expiry.
  * Tries refresh token first, then notifies renderer to re-login.
  */
@@ -409,7 +479,7 @@ const handleSessionRefresh = async () => {
       }
       logger.log('[Auth] No refresh token and token expired, notifying renderer to re-login');
       lastSessionExpiredSent = now;
-      mb?.window?.webContents.send('auth:sessionExpired');
+      sendToRenderers('auth:sessionExpired');
       return;
     }
 
@@ -478,7 +548,7 @@ const handleSessionRefresh = async () => {
       }
       lastSessionExpiredSent = now;
       logger.log('[Auth] Refresh token invalid, notifying renderer to re-login');
-      mb?.window?.webContents.send('auth:sessionExpired');
+      sendToRenderers('auth:sessionExpired');
     } else {
       // Network failure — schedule a retry in 30s instead of logging out
       logger.log('[Auth] Refresh failed due to network, will retry in 30s');
@@ -1219,8 +1289,11 @@ const pollPermissions = () => {
       // Stop aggressive polling — permission was detected
       stopAggressivePermissionPolling();
 
+      // The System Settings companion has done its job
+      hideDragHelper();
+
       // Notify renderer immediately so UI updates instantly (Loom-style)
-      mb?.window?.webContents.send('permissions:changed', {
+      sendToRenderers('permissions:changed', {
         ...current,
         newlyGranted: true,
       });
@@ -1231,14 +1304,17 @@ const pollPermissions = () => {
           // Permissions work without restart — screen recording on macOS 13+
           logger.log('[Permissions] Functional validation passed — no restart needed');
           store.set('permissionsFunctionallyWorking', true);
-          mb?.window?.webContents.send('permissions:validated', { working: true });
+          sendToRenderers('permissions:validated', { working: true });
 
           // Re-initialize time tracking with new permissions
           initializeTimeTracking();
         } else if (accessibilityChanged && current.accessibility) {
           // Accessibility often needs restart on macOS for TCC to fully apply
           logger.log('[Permissions] Accessibility granted but functional test failed — restart recommended');
-          mb?.window?.webContents.send('permissions:validated', { working: false, needsRestart: true });
+          sendToRenderers('permissions:validated', { working: false, needsRestart: true });
+          // During setup the window itself folds the restart into its last
+          // step — a native dialog on top of it would be jarring.
+          if (isOnboardingOpen()) return;
           dialog.showMessageBox({
             type: 'info',
             title: 'Almost There',
@@ -1260,7 +1336,7 @@ const pollPermissions = () => {
       });
     } else {
       // Permission was revoked
-      mb?.window?.webContents.send('permissions:changed', {
+      sendToRenderers('permissions:changed', {
         ...current,
         newlyGranted: false,
       });
@@ -1386,6 +1462,10 @@ ipcMain.handle('settings:set', (_, key: unknown, value: unknown) => {
   }
   if (validKey === 'startAtLogin' && typeof value === 'boolean') {
     app.setLoginItemSettings({ openAtLogin: value });
+  }
+
+  if (validKey === 'autoUpdate' && typeof value === 'boolean') {
+    autoUpdater.autoDownload = value;
   }
 
   if (validKey === 'globalShortcut' && typeof value === 'string') {
@@ -2375,7 +2455,7 @@ const setupAutoUpdater = () => {
     debug: (message: unknown) => logger.log('[AutoUpdater] DEBUG:', message),
   };
 
-  autoUpdater.autoDownload = true;
+  autoUpdater.autoDownload = store.get('autoUpdate') !== false;
   autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('checking-for-update', () => {
@@ -2448,6 +2528,97 @@ ipcMain.handle('update:getPending', () => downloadedUpdateVersion);
 
 ipcMain.handle('app:getVersion', () => {
   return app.getVersion();
+});
+
+// ── Setup window IPC ──────────────────────────────────────────────────
+
+ipcMain.handle('onboarding:getState', async () => {
+  const token = await getToken();
+  return {
+    authenticated: !!token,
+    onboardingCompleted: !!store.get('onboardingCompleted'),
+    startAtLogin: !!store.get('startAtLogin'),
+    autoUpdate: store.get('autoUpdate') !== false,
+    theme: store.get('theme') || 'system',
+    shortcut: store.get('globalShortcut') || 'CommandOrControl+Shift+A',
+    trackingEnabled: getTimeTrackingSettings().enabled,
+    version: app.getVersion(),
+    isPackaged: app.isPackaged,
+  };
+});
+
+ipcMain.handle('onboarding:open', async () => {
+  mb?.hideWindow();
+  await openOnboardingWindow();
+  return true;
+});
+
+ipcMain.handle('onboarding:setTheme', (_, theme: unknown) => {
+  if (theme !== 'system' && theme !== 'light' && theme !== 'dark') return false;
+  store.set('theme', theme);
+  const dark = theme === 'dark' || (theme === 'system' && nativeTheme.shouldUseDarkColors);
+  store.set('darkMode', dark);
+  return true;
+});
+
+ipcMain.handle('onboarding:showDragHelper', (_, kind: unknown) => {
+  if (kind !== 'accessibility' && kind !== 'screenRecording') return false;
+  showDragHelper(kind);
+  return true;
+});
+
+ipcMain.handle('onboarding:hideDragHelper', () => {
+  hideDragHelper();
+  return true;
+});
+
+// Native drag-out of the app bundle. Must run synchronously inside the
+// renderer's dragstart, which is why this is `on`, not `handle`.
+ipcMain.on('onboarding:startAppDrag', (event) => {
+  try {
+    event.sender.startDrag({ file: appBundlePath(), icon: appDragIcon() });
+  } catch (error) {
+    logger.error('[Onboarding] startDrag failed:', error);
+  }
+});
+
+ipcMain.handle('onboarding:hideHotkeyHint', () => {
+  hideHotkeyHint();
+  return true;
+});
+
+ipcMain.handle('onboarding:complete', async (_, opts: unknown) => {
+  const relaunch = !!(opts && typeof opts === 'object' && (opts as { relaunch?: unknown }).relaunch === true);
+  store.set('onboardingCompleted', true);
+  logger.log('[Onboarding] Completed', { relaunch });
+
+  if (relaunch) {
+    // macOS only hands window titles to a process started after the Screen
+    // Recording grant. Come back straight into the popover.
+    store.set('resumeAfterRelaunch', true);
+    closeOnboardingWindows();
+    app.relaunch();
+    app.exit(0);
+    return true;
+  }
+
+  closeOnboardingWindows();
+
+  // The popover was created before sign-in; a reload re-mounts it with the
+  // token in place, then it opens with the hotkey card underneath.
+  const popover = mb?.window;
+  const shortcut = store.get('globalShortcut') || 'CommandOrControl+Shift+A';
+  if (popover && !popover.isDestroyed()) {
+    popover.webContents.once('did-finish-load', () => {
+      mb?.showWindow();
+      showHotkeyHint(shortcut);
+    });
+    popover.webContents.reload();
+  } else {
+    mb?.showWindow();
+    showHotkeyHint(shortcut);
+  }
+  return true;
 });
 
 // App lifecycle

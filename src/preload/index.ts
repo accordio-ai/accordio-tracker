@@ -107,6 +107,19 @@ interface SyncStatus {
   isSyncing: boolean;
 }
 
+/** Everything the setup window needs to render its first frame. */
+export interface OnboardingState {
+  authenticated: boolean;
+  onboardingCompleted: boolean;
+  startAtLogin: boolean;
+  autoUpdate: boolean;
+  theme: 'system' | 'light' | 'dark';
+  shortcut: string;
+  trackingEnabled: boolean;
+  version: string;
+  isPackaged: boolean;
+}
+
 // Type definitions for the exposed API
 export interface ElectronAPI {
   auth: {
@@ -272,6 +285,17 @@ export interface ElectronAPI {
     openExternal: (url: string) => Promise<boolean>;
     quit: () => void;
     relaunch: () => Promise<void>;
+  };
+  onboarding: {
+    getState: () => Promise<OnboardingState>;
+    open: () => Promise<boolean>;
+    complete: (opts?: { relaunch?: boolean }) => Promise<boolean>;
+    setTheme: (theme: 'system' | 'light' | 'dark') => Promise<boolean>;
+    showDragHelper: (kind: 'accessibility' | 'screenRecording') => Promise<boolean>;
+    hideDragHelper: () => Promise<boolean>;
+    /** Native file drag of the .app bundle — call from a dragstart handler. */
+    startAppDrag: () => void;
+    hideHotkeyHint: () => Promise<boolean>;
   };
   update: {
     check: () => Promise<{ success: boolean; data?: unknown; error?: string }>;
@@ -474,6 +498,16 @@ contextBridge.exposeInMainWorld('electron', {
     openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
     quit: () => ipcRenderer.invoke('app:quit'),
     relaunch: () => ipcRenderer.invoke('app:relaunch'),
+  },
+  onboarding: {
+    getState: () => ipcRenderer.invoke('onboarding:getState'),
+    open: () => ipcRenderer.invoke('onboarding:open'),
+    complete: (opts?: { relaunch?: boolean }) => ipcRenderer.invoke('onboarding:complete', opts ?? {}),
+    setTheme: (theme: 'system' | 'light' | 'dark') => ipcRenderer.invoke('onboarding:setTheme', theme),
+    showDragHelper: (kind: 'accessibility' | 'screenRecording') => ipcRenderer.invoke('onboarding:showDragHelper', kind),
+    hideDragHelper: () => ipcRenderer.invoke('onboarding:hideDragHelper'),
+    startAppDrag: () => ipcRenderer.send('onboarding:startAppDrag'),
+    hideHotkeyHint: () => ipcRenderer.invoke('onboarding:hideHotkeyHint'),
   },
   update: {
     check: () => ipcRenderer.invoke('update:check'),
