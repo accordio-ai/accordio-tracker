@@ -430,7 +430,7 @@ const routeFirstRun = async () => {
   }
 
   const forced = process.env.ACCORDIO_FORCE_ONBOARDING === '1';
-  if (forced || !token || !store.get('onboardingCompleted')) {
+  if (forced || !(await hasLiveToken()) || !store.get('onboardingCompleted')) {
     try {
       await openOnboardingWindow();
     } catch (error) {
@@ -446,6 +446,28 @@ const routeFirstRun = async () => {
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 let isRefreshing = false; // Guard against concurrent refresh attempts
 let lastSessionExpiredSent = 0; // Debounce rapid logout events
+
+/**
+ * A stored token only counts as a session while it is inside its expiry.
+ * Tokens from older builds carry no expiry and stay trusted until a 401.
+ */
+const hasLiveToken = async () => {
+  if (!(await getToken())) return false;
+  const expiry = getTokenExpiry();
+  return !expiry || Date.now() < expiry;
+};
+
+/**
+ * The session is dead for good. Drop the stored token too: left in place it
+ * makes setup skip sign-in, and finishing setup lands back on the expired
+ * session, in a loop.
+ */
+const endDeadSession = async () => {
+  await clearAllTokens();
+  if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; }
+  apiClient = null;
+  getTimeTracker()?.updateSettings({ token: '' });
+};
 
 const handleSessionRefresh = async () => {
   // Prevent concurrent refresh attempts (e.g. multiple 401s at once)
@@ -472,6 +494,7 @@ const handleSessionRefresh = async () => {
         return;
       }
 
+      await endDeadSession();
       const now = Date.now();
       if (now - lastSessionExpiredSent < 5000) {
         logger.log('[Auth] No refresh token, but sessionExpired already sent recently');
@@ -540,7 +563,7 @@ const handleSessionRefresh = async () => {
     // Only clear refresh token if server explicitly rejected it (401)
     // For network errors, keep the token so we can retry later (e.g. after sleep/wake)
     if (refreshTokenRejected) {
-      await clearRefreshToken();
+      await endDeadSession();
       const now = Date.now();
       if (now - lastSessionExpiredSent < 5000) {
         logger.log('[Auth] Refresh rejected, but sessionExpired already sent recently');
@@ -2533,9 +2556,8 @@ ipcMain.handle('app:getVersion', () => {
 // ── Setup window IPC ──────────────────────────────────────────────────
 
 ipcMain.handle('onboarding:getState', async () => {
-  const token = await getToken();
   return {
-    authenticated: !!token,
+    authenticated: await hasLiveToken(),
     onboardingCompleted: !!store.get('onboardingCompleted'),
     startAtLogin: !!store.get('startAtLogin'),
     autoUpdate: store.get('autoUpdate') !== false,
